@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, User, Bell, MapPin } from 'lucide-react';
 import Button from './Button';
+import AuthModal from './AuthModal';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const location = useLocation();
 
   // Handle scroll effect
@@ -37,6 +39,10 @@ const Navbar = () => {
 
   const isActive = (path: string) => {
     return location.pathname === path;
+  };
+
+  const handleNotificationClick = () => {
+    alert('Notifications feature coming soon!');
   };
 
   return (
@@ -75,14 +81,17 @@ const Navbar = () => {
 
           {/* Desktop Action Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <button className="p-2 rounded-full hover:bg-secondary/80 transition-colors duration-300">
+            <button 
+              className="p-2 rounded-full hover:bg-secondary/80 transition-colors duration-300"
+              onClick={handleNotificationClick}
+            >
               <Bell className="h-5 w-5 text-foreground/80" />
             </button>
-            <Button variant="ghost" size="sm" className="font-normal">
+            <Button variant="ghost" size="sm" className="font-normal" onClick={() => setAuthModalOpen(true)}>
               <User className="h-4 w-4 mr-2" />
               Sign In
             </Button>
-            <Button>Get Started</Button>
+            <Button onClick={() => setAuthModalOpen(true)}>Get Started</Button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -117,14 +126,17 @@ const Navbar = () => {
               </Link>
             ))}
             <div className="border-t border-border/30 my-2"></div>
-            <Button className="w-full justify-center" variant="ghost">
+            <Button className="w-full justify-center" variant="ghost" onClick={() => setAuthModalOpen(true)}>
               <User className="h-4 w-4 mr-2" />
               Sign In
             </Button>
-            <Button className="w-full justify-center">Get Started</Button>
+            <Button className="w-full justify-center" onClick={() => setAuthModalOpen(true)}>Get Started</Button>
           </div>
         </div>
       )}
+      
+      {/* Auth Modal */}
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </nav>
   );
 };

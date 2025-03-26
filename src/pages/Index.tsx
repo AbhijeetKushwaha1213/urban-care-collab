@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, PlusCircle, TrendingUp, MessageSquare, Users, ArrowRight, Search } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import Button from '@/components/Button';
+import { Button } from '@/components/ui/button';
 import FeaturedIssue from '@/components/FeaturedIssue';
 import IssueCard from '@/components/IssueCard';
 import AuthModal from '@/components/AuthModal';
@@ -60,6 +60,7 @@ const categories = ["All", "Trash", "Water", "Infrastructure", "Drainage", "Othe
 
 const Index = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const navigate = useNavigate();
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -86,7 +87,7 @@ const Index = () => {
               <span>Get Started</span>
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
-            <Button size="lg" variant="outline">
+            <Button size="lg" variant="outline" onClick={() => navigate('/issues')}>
               <Search className="mr-2 h-4 w-4" />
               <span>Explore Issues</span>
             </Button>
@@ -191,7 +192,7 @@ const Index = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" onClick={() => setAuthModalOpen(true)}>Create an Account</Button>
-              <Button size="lg" variant="outline">Learn More</Button>
+              <Button size="lg" variant="outline" onClick={() => navigate('/about')}>Learn More</Button>
             </div>
           </div>
         </div>

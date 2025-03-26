@@ -2,24 +2,79 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, ArrowRight, Globe } from 'lucide-react';
 import Button from './Button';
+import { useToast } from "@/components/ui/use-toast";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface UserAccount {
+  name: string;
+  email: string;
+  password: string;
+}
+
+// Mock user storage - in a real app this would be handled by a backend
+const userAccounts: UserAccount[] = [];
+
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [isSignIn, setIsSignIn] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle authentication logic
-    console.log({ email, password, name });
+    setIsLoading(true);
+    
+    // Simulate API call with timeout
+    setTimeout(() => {
+      if (isSignIn) {
+        // Sign in logic
+        const userExists = userAccounts.find(
+          account => account.email === email && account.password === password
+        );
+        
+        if (userExists) {
+          toast({
+            title: "Signed in successfully",
+            description: `Welcome back, ${userExists.name}!`,
+          });
+          onClose();
+        } else {
+          toast({
+            title: "Sign in failed",
+            description: "Invalid email or password",
+            variant: "destructive",
+          });
+        }
+      } else {
+        // Sign up logic
+        if (userAccounts.some(account => account.email === email)) {
+          toast({
+            title: "Sign up failed",
+            description: "Email already exists",
+            variant: "destructive",
+          });
+        } else {
+          // Create new account
+          userAccounts.push({ name, email, password });
+          console.log({ email, password, name });
+          
+          toast({
+            title: "Account created",
+            description: "Your account has been created successfully",
+          });
+          onClose();
+        }
+      }
+      setIsLoading(false);
+    }, 1000);
   };
 
   const toggleMode = () => {
@@ -120,7 +175,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </div>
             )}
             
-            <Button className="w-full group" size="lg">
+            <Button className="w-full group" size="lg" isLoading={isLoading}>
               <span>{isSignIn ? 'Sign in' : 'Create account'}</span>
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
@@ -131,7 +186,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <div className="border-t border-border flex-grow" />
             </div>
             
-            <Button variant="outline" className="w-full" size="lg">
+            <Button variant="outline" className="w-full" size="lg" onClick={() => {
+              toast({
+                title: "Social login",
+                description: "Social login feature coming soon!",
+              });
+            }}>
               <Globe className="mr-2 h-4 w-4" />
               <span>Google</span>
             </Button>
