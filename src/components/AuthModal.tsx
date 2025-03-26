@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, ArrowRight, Google } from 'lucide-react';
+import { X, Mail, Lock, User, ArrowRight, Globe } from 'lucide-react';
 import Button from './Button';
 
 interface AuthModalProps {
@@ -132,7 +132,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </div>
             
             <Button variant="outline" className="w-full" size="lg">
-              <Google className="mr-2 h-4 w-4" />
+              <Globe className="mr-2 h-4 w-4" />
               <span>Google</span>
             </Button>
           </form>
