@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Users, Clock, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, Users, Clock, ArrowRight, User } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
 // Mock event data
