@@ -1,15 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User, Bell, MapPin } from 'lucide-react';
+import { Menu, X, User, Bell, MapPin, LogOut } from 'lucide-react';
 import Button from './Button';
 import AuthModal from './AuthModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const location = useLocation();
+  const { currentUser, logOut } = useAuth();
 
   // Handle scroll effect
   useEffect(() => {
@@ -43,6 +47,22 @@ const Navbar = () => {
 
   const handleNotificationClick = () => {
     alert('Notifications feature coming soon!');
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await logOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    if (!currentUser || !currentUser.displayName) return "U";
+    const names = currentUser.displayName.split(" ");
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
   };
 
   return (
@@ -87,11 +107,40 @@ const Navbar = () => {
             >
               <Bell className="h-5 w-5 text-foreground/80" />
             </button>
-            <Button variant="ghost" size="sm" className="font-normal" onClick={() => setAuthModalOpen(true)}>
-              <User className="h-4 w-4 mr-2" />
-              Sign In
-            </Button>
-            <Button onClick={() => setAuthModalOpen(true)}>Get Started</Button>
+            
+            {currentUser ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={currentUser.photoURL || undefined} />
+                      <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                    </Avatar>
+                    <span className="hidden sm:inline">{currentUser.displayName || currentUser.email}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>
+                    <Link to="/profile" className="flex items-center w-full">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" className="font-normal" onClick={() => setAuthModalOpen(true)}>
+                  <User className="h-4 w-4 mr-2" />
+                  Sign In
+                </Button>
+                <Button onClick={() => setAuthModalOpen(true)}>Get Started</Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -126,11 +175,36 @@ const Navbar = () => {
               </Link>
             ))}
             <div className="border-t border-border/30 my-2"></div>
-            <Button className="w-full justify-center" variant="ghost" onClick={() => setAuthModalOpen(true)}>
-              <User className="h-4 w-4 mr-2" />
-              Sign In
-            </Button>
-            <Button className="w-full justify-center" onClick={() => setAuthModalOpen(true)}>Get Started</Button>
+            
+            {currentUser ? (
+              <>
+                <div className="flex items-center p-2">
+                  <Avatar className="h-8 w-8 mr-2">
+                    <AvatarImage src={currentUser.photoURL || undefined} />
+                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium">{currentUser.displayName || currentUser.email}</span>
+                </div>
+                <Link to="/profile" className="w-full">
+                  <Button className="w-full justify-center" variant="ghost">
+                    <User className="h-4 w-4 mr-2" />
+                    Profile
+                  </Button>
+                </Link>
+                <Button className="w-full justify-center" variant="ghost" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button className="w-full justify-center" variant="ghost" onClick={() => setAuthModalOpen(true)}>
+                  <User className="h-4 w-4 mr-2" />
+                  Sign In
+                </Button>
+                <Button className="w-full justify-center" onClick={() => setAuthModalOpen(true)}>Get Started</Button>
+              </>
+            )}
           </div>
         </div>
       )}

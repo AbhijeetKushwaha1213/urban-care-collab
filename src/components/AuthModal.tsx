@@ -3,20 +3,12 @@ import React, { useState } from 'react';
 import { X, Mail, Lock, User, ArrowRight, Globe } from 'lucide-react';
 import Button from './Button';
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-interface UserAccount {
-  name: string;
-  email: string;
-  password: string;
-}
-
-// Mock user storage - in a real app this would be handled by a backend
-const userAccounts: UserAccount[] = [];
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [isSignIn, setIsSignIn] = useState(true);
@@ -25,56 +17,53 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call with timeout
-    setTimeout(() => {
+    try {
       if (isSignIn) {
         // Sign in logic
-        const userExists = userAccounts.find(
-          account => account.email === email && account.password === password
-        );
-        
-        if (userExists) {
-          toast({
-            title: "Signed in successfully",
-            description: `Welcome back, ${userExists.name}!`,
-          });
-          onClose();
-        } else {
-          toast({
-            title: "Sign in failed",
-            description: "Invalid email or password",
-            variant: "destructive",
-          });
-        }
+        await signIn(email, password);
+        toast({
+          title: "Signed in successfully",
+          description: "Welcome back!",
+        });
+        onClose();
       } else {
         // Sign up logic
-        if (userAccounts.some(account => account.email === email)) {
-          toast({
-            title: "Sign up failed",
-            description: "Email already exists",
-            variant: "destructive",
-          });
-        } else {
-          // Create new account
-          userAccounts.push({ name, email, password });
-          console.log({ email, password, name });
-          
-          toast({
-            title: "Account created",
-            description: "Your account has been created successfully",
-          });
-          onClose();
-        }
+        await signUp(email, password, name);
+        toast({
+          title: "Account created",
+          description: "Your account has been created successfully",
+        });
+        onClose();
       }
+    } catch (error) {
+      // Error handling is done in the context
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithGoogle();
+      toast({
+        title: "Signed in successfully",
+        description: "Welcome back!",
+      });
+      onClose();
+    } catch (error) {
+      // Error handling is done in the context
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleMode = () => {
@@ -186,12 +175,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <div className="border-t border-border flex-grow" />
             </div>
             
-            <Button variant="outline" className="w-full" size="lg" onClick={() => {
-              toast({
-                title: "Social login",
-                description: "Social login feature coming soon!",
-              });
-            }}>
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              size="lg" 
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+            >
               <Globe className="mr-2 h-4 w-4" />
               <span>Google</span>
             </Button>

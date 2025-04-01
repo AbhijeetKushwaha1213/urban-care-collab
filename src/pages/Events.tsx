@@ -1,53 +1,19 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { MapPin, Calendar, Users, Clock, ArrowRight, User } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-
-// Mock event data
-const eventsData = [
-  {
-    id: "1",
-    title: "Park Cleanup at Willowbrook",
-    description: "Join us for a community cleanup event at Willowbrook Park. We'll be focusing on trash collection and bench repairs.",
-    location: "Willowbrook Park, Main Avenue",
-    date: "Saturday, June 15th, 2024",
-    time: "10:00 AM - 1:00 PM",
-    status: "Upcoming",
-    timeRemaining: "In 3 days",
-    categories: ["Cleanup", "Infrastructure"],
-    volunteersCount: 12
-  },
-  {
-    id: "2",
-    title: "Drainage System Assessment at Pine Road",
-    description: "A community meetup to assess the drainage blockage issues after recent rainfall and coordinate with local authorities.",
-    location: "Pine Road, North District",
-    date: "Tuesday, June 18th, 2024",
-    time: "4:00 PM - 6:00 PM",
-    status: "Scheduled",
-    timeRemaining: "Next week",
-    categories: ["Assessment", "Drainage"],
-    volunteersCount: 8
-  },
-  {
-    id: "3",
-    title: "Community Garden Water System Installation",
-    description: "Installing a new water system for the Maple Garden Community to address the ongoing water shortage issues.",
-    location: "Maple Garden, East Side",
-    date: "Sunday, June 23rd, 2024",
-    time: "9:00 AM - 2:00 PM",
-    status: "Scheduled",
-    timeRemaining: "In 2 weeks",
-    categories: ["Construction", "Water"],
-    volunteersCount: 15
-  }
-];
+import { useAuth } from "@/contexts/AuthContext";
+import { getEvents, createEvent, EventData } from "@/services/firestoreService";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const Events = () => {
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   const [showCreateEventForm, setShowCreateEventForm] = useState(false);
+  const queryClient = useQueryClient();
+  
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
@@ -57,20 +23,71 @@ const Events = () => {
     categories: ''
   });
 
+  // Fetch events using React Query
+  const { data: eventsData = [], isLoading, error } = useQuery({
+    queryKey: ['events'],
+    queryFn: getEvents
+  });
+
+  // Create event mutation
+  const createEventMutation = useMutation({
+    mutationFn: async (eventData: {
+      title: string;
+      description: string;
+      location: string;
+      date: string;
+      time: string;
+      categories: string[];
+    }) => {
+      if (!currentUser) throw new Error("You must be logged in to create an event");
+      return await createEvent(eventData, currentUser.uid);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch events after a new event is created
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast({
+        title: "Event Created",
+        description: "Your event has been successfully created!",
+      });
+      setShowCreateEventForm(false);
+      setNewEvent({
+        title: '',
+        description: '',
+        location: '',
+        date: '',
+        time: '',
+        categories: ''
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create event",
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleCreateEvent = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Event Created",
-      description: "Your event has been successfully created!",
-    });
-    setShowCreateEventForm(false);
-    setNewEvent({
-      title: '',
-      description: '',
-      location: '',
-      date: '',
-      time: '',
-      categories: ''
+    if (!currentUser) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to create an event",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Convert comma-separated categories to array
+    const categoriesArray = newEvent.categories
+      .split(',')
+      .map(category => category.trim())
+      .filter(category => category !== '');
+
+    createEventMutation.mutate({
+      ...newEvent,
+      categories: categoriesArray,
     });
   };
 
@@ -78,6 +95,34 @@ const Events = () => {
     const { name, value } = e.target;
     setNewEvent(prev => ({ ...prev, [name]: value }));
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen">
+        <Navbar />
+        <div className="pt-32 pb-20 px-4 md:px-6 container mx-auto">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-4xl md:text-5xl font-semibold mb-6">Community Events</h1>
+            <p className="text-xl text-muted-foreground mb-12">Loading events...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen">
+        <Navbar />
+        <div className="pt-32 pb-20 px-4 md:px-6 container mx-auto">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-4xl md:text-5xl font-semibold mb-6">Community Events</h1>
+            <p className="text-xl text-muted-foreground mb-12">Error loading events. Please try again later.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -94,7 +139,17 @@ const Events = () => {
           {!showCreateEventForm ? (
             <Button 
               className="w-full mb-8 py-8 text-lg gap-3"
-              onClick={() => setShowCreateEventForm(true)}
+              onClick={() => {
+                if (!currentUser) {
+                  toast({
+                    title: "Authentication Required",
+                    description: "Please sign in to create an event",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                setShowCreateEventForm(true);
+              }}
             >
               <span>Create New Event</span>
               <ArrowRight className="h-5 w-5" />
@@ -201,64 +256,70 @@ const Events = () => {
           )}
           
           <div className="flex flex-col gap-6">
-            {eventsData.map(event => (
-              <div key={event.id} className="rounded-xl border p-6 bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <span className={`text-sm ${event.status === 'Upcoming' ? 'bg-primary/10 text-primary' : 'bg-secondary'} px-3 py-1 rounded-full`}>
-                      {event.status}
-                    </span>
-                    <span className="text-sm text-muted-foreground">{event.timeRemaining}</span>
-                  </div>
-                  
-                  <h3 className="text-xl font-semibold">{event.title}</h3>
-                  <p className="text-muted-foreground">{event.description}</p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3">
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      <span>{event.location}</span>
+            {eventsData.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-lg text-muted-foreground">No events found. Create the first one!</p>
+              </div>
+            ) : (
+              eventsData.map((event: EventData) => (
+                <div key={event.id} className="rounded-xl border p-6 bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-sm ${event.status === 'Upcoming' ? 'bg-primary/10 text-primary' : 'bg-secondary'} px-3 py-1 rounded-full`}>
+                        {event.status}
+                      </span>
+                      <span className="text-sm text-muted-foreground">{event.timeRemaining}</span>
                     </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      <span>{event.date}</span>
+                    
+                    <h3 className="text-xl font-semibold">{event.title}</h3>
+                    <p className="text-muted-foreground">{event.description}</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3">
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        <span>{event.location}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span>{event.date}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4 mr-2" />
+                        <span>{event.time}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Users className="h-4 w-4 mr-2" />
+                        <span>{event.volunteersCount || 0} volunteers attending</span>
+                      </div>
                     </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4 mr-2" />
-                      <span>{event.time}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Users className="h-4 w-4 mr-2" />
-                      <span>{event.volunteersCount} volunteers attending</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    {event.categories.map((category, index) => (
-                      <span key={index} className="text-xs px-2 py-1 bg-secondary rounded-md">{category}</span>
-                    ))}
-                  </div>
-                  
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="flex -space-x-2">
-                      {[...Array(Math.min(event.volunteersCount, 5))].map((_, i) => (
-                        <div key={i} className="h-8 w-8 rounded-full bg-secondary border-2 border-background flex items-center justify-center overflow-hidden">
-                          <User className="h-4 w-4" />
-                        </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      {event.categories && event.categories.map((category, index) => (
+                        <span key={index} className="text-xs px-2 py-1 bg-secondary rounded-md">{category}</span>
                       ))}
                     </div>
-                    <Button variant="link" onClick={() => {
-                      toast({
-                        title: "Event Details",
-                        description: `Viewing details for ${event.title}`,
-                      });
-                    }}>
-                      View Details
-                    </Button>
+                    
+                    <div className="flex justify-between items-center mt-2">
+                      <div className="flex -space-x-2">
+                        {[...Array(Math.min(event.volunteersCount || 0, 5))].map((_, i) => (
+                          <div key={i} className="h-8 w-8 rounded-full bg-secondary border-2 border-background flex items-center justify-center overflow-hidden">
+                            <User className="h-4 w-4" />
+                          </div>
+                        ))}
+                      </div>
+                      <Button variant="link" onClick={() => {
+                        toast({
+                          title: "Event Details",
+                          description: `Viewing details for ${event.title}`,
+                        });
+                      }}>
+                        View Details
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
