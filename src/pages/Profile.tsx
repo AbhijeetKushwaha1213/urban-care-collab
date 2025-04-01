@@ -1,56 +1,140 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { User, MapPin, Calendar, Award, Settings, LogOut, Edit, Mail, Phone, Home, Clock } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Button from '@/components/Button';
 import IssueCard from '@/components/IssueCard';
-
-// Sample user data
-const userData = {
-  name: "Jane Cooper",
-  avatar: "https://randomuser.me/api/portraits/women/12.jpg",
-  location: "San Francisco, CA",
-  joinDate: "January 2023",
-  badges: ["Top Contributor", "Neighborhood Hero", "Event Organizer"],
-  email: "jane.cooper@example.com",
-  phone: "(555) 123-4567",
-  address: "123 Main Street, San Francisco, CA 94105",
-  bio: "Community activist passionate about urban improvement and sustainability. I love working with neighbors to solve local problems and make our city better for everyone.",
-  stats: {
-    issuesReported: 14,
-    issuesSolved: 8,
-    eventsAttended: 12
-  }
-};
-
-// Sample issues reported by the user
-const userIssues = [
-  {
-    id: "1",
-    title: "Broken Park Benches in Willowbrook Park",
-    description: "Several park benches in Willowbrook Park have been damaged and need repair. This has been an ongoing issue for several months.",
-    location: "Willowbrook Park, Main Avenue",
-    category: "Infrastructure",
-    image: "https://images.unsplash.com/photo-1604357209793-fca5dca89f97?q=80&w=800&auto=format&fit=crop",
-    date: "2 days ago",
-    commentsCount: 15,
-    volunteersCount: 12
-  },
-  {
-    id: "3",
-    title: "Water Shortage in Maple Garden Community",
-    description: "Our community garden has been suffering from water shortage for the past week, endangering all the plants we've grown.",
-    location: "Maple Garden, East Side",
-    category: "Water",
-    image: "https://images.unsplash.com/photo-1543674892-7d64d45facad?q=80&w=800&auto=format&fit=crop",
-    date: "3 days ago",
-    commentsCount: 12,
-    volunteersCount: 7
-  }
-];
+import EditProfileModal from '@/components/EditProfileModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { toast } from '@/hooks/use-toast';
 
 const Profile = () => {
+  const { currentUser, logOut } = useAuth();
+  const navigate = useNavigate();
+  const [userData, setUserData] = useState<any>(null);
+  const [userIssues, setUserIssues] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
+  useEffect(() => {
+    // If no user is logged in, redirect to home
+    if (!currentUser) {
+      navigate('/');
+      return;
+    }
+
+    const fetchUserData = async () => {
+      setIsLoading(true);
+      try {
+        const userDoc = await getDoc(doc(db, "userProfiles", currentUser.uid));
+        
+        if (userDoc.exists()) {
+          setUserData({
+            name: userDoc.data().fullName || currentUser.displayName,
+            avatar: currentUser.photoURL,
+            location: `${userDoc.data().city || ''}, ${userDoc.data().state || ''}`,
+            joinDate: new Date(userDoc.data().createdAt.toDate()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+            badges: userDoc.data().badges || ["New Member"],
+            email: currentUser.email,
+            phone: userDoc.data().phone || "Not provided",
+            address: userDoc.data().address || "Not provided",
+            bio: userDoc.data().bio || "No bio provided",
+            stats: {
+              issuesReported: 0,
+              issuesSolved: 0,
+              eventsAttended: 0
+            }
+          });
+        } else {
+          // If no profile exists, use basic auth data
+          setUserData({
+            name: currentUser.displayName || "User",
+            avatar: currentUser.photoURL,
+            location: "Location not set",
+            joinDate: "Recently joined",
+            badges: ["New Member"],
+            email: currentUser.email,
+            phone: "Not provided",
+            address: "Not provided",
+            bio: "No bio provided",
+            stats: {
+              issuesReported: 0,
+              issuesSolved: 0,
+              eventsAttended: 0
+            }
+          });
+        }
+
+        // Fetch user's reported issues
+        const issuesQuery = query(
+          collection(db, "issues"),
+          where("userId", "==", currentUser.uid),
+          orderBy("createdAt", "desc"),
+          limit(5)
+        );
+        
+        const issuesSnapshot = await getDocs(issuesQuery);
+        const issues = issuesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          date: doc.data().createdAt ? new Date(doc.data().createdAt.toDate()).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Recently"
+        }));
+        
+        setUserIssues(issues);
+        
+        // Update stats
+        if (userData) {
+          setUserData(prev => ({
+            ...prev,
+            stats: {
+              ...prev.stats,
+              issuesReported: issues.length
+            }
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [currentUser, navigate]);
+
+  const handleLogout = async () => {
+    try {
+      await logOut();
+      navigate('/');
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast({
+        title: "Error",
+        description: "Failed to log out",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading || !userData) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -74,7 +158,7 @@ const Profile = () => {
                   <div className="absolute -top-16 left-1/2 transform -translate-x-1/2">
                     <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-card">
                       <img 
-                        src={userData.avatar} 
+                        src={userData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`} 
                         alt={userData.name} 
                         className="h-full w-full object-cover"
                       />
@@ -89,7 +173,7 @@ const Profile = () => {
                     </div>
                     
                     <div className="flex flex-wrap justify-center gap-2 mb-6">
-                      {userData.badges.map((badge, index) => (
+                      {userData.badges.map((badge: string, index: number) => (
                         <div 
                           key={index} 
                           className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium"
@@ -114,7 +198,7 @@ const Profile = () => {
                       </div>
                     </div>
                     
-                    <Button className="w-full">
+                    <Button className="w-full" onClick={() => setEditModalOpen(true)}>
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Profile
                     </Button>
@@ -172,7 +256,10 @@ const Profile = () => {
                       <span>My Events</span>
                     </div>
                   </button>
-                  <button className="w-full flex items-center justify-between px-3 py-2 text-destructive rounded-lg hover:bg-destructive/10 transition-colors">
+                  <button 
+                    className="w-full flex items-center justify-between px-3 py-2 text-destructive rounded-lg hover:bg-destructive/10 transition-colors"
+                    onClick={handleLogout}
+                  >
                     <div className="flex items-center">
                       <LogOut className="h-5 w-5 mr-3" />
                       <span>Sign Out</span>
@@ -188,7 +275,7 @@ const Profile = () => {
               <div className="bg-card rounded-xl shadow-subtle p-6 mb-8 animate-slide-up">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">About</h3>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditModalOpen(true)}>
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
@@ -211,9 +298,26 @@ const Profile = () => {
                 </div>
                 
                 <div className="space-y-6">
-                  {userIssues.map(issue => (
-                    <IssueCard key={issue.id} {...issue} />
-                  ))}
+                  {userIssues.length > 0 ? (
+                    userIssues.map((issue) => (
+                      <IssueCard key={issue.id} {...issue} />
+                    ))
+                  ) : (
+                    <div className="text-center py-12 bg-muted/30 rounded-xl">
+                      <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                        <MapPin className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-lg font-medium mb-2">No Issues Reported Yet</h3>
+                      <p className="text-muted-foreground max-w-md mx-auto mb-6">
+                        You haven't reported any community issues yet. Start making a difference by reporting problems in your neighborhood.
+                      </p>
+                      <Link to="/issues/report">
+                        <Button>
+                          Report an Issue
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -237,6 +341,9 @@ const Profile = () => {
           </div>
         </div>
       </footer>
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} />
     </div>
   );
 };

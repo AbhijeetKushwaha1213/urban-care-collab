@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, PlusCircle, TrendingUp, MessageSquare, Users, ArrowRight, Search } from 'lucide-react';
@@ -7,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import FeaturedIssue from '@/components/FeaturedIssue';
 import IssueCard from '@/components/IssueCard';
 import AuthModal from '@/components/AuthModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
-// Sample data for demonstration
 const featuredIssue = {
   id: "1",
   title: "Broken Park Benches in Willowbrook Park",
@@ -61,6 +61,19 @@ const categories = ["All", "Trash", "Water", "Infrastructure", "Drainage", "Othe
 const Index = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const navigate = useNavigate();
+  const { currentUser, isNewUser } = useAuth();
+  
+  const handleReportIssue = () => {
+    if (!currentUser) {
+      setAuthModalOpen(true);
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to report an issue",
+      });
+    } else {
+      navigate('/issues/report');
+    }
+  };
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -125,16 +138,16 @@ const Index = () => {
             <IssueCard key={issue.id} {...issue} />
           ))}
           
-          <Link 
-            to="/issues/new" 
-            className="flex flex-col items-center justify-center p-8 rounded-xl border border-dashed border-border bg-secondary/50 hover:bg-secondary transition-colors"
+          <div 
+            onClick={handleReportIssue}
+            className="flex flex-col items-center justify-center p-8 rounded-xl border border-dashed border-border bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
           >
             <PlusCircle className="h-10 w-10 text-primary mb-4" />
             <h3 className="text-lg font-medium mb-1">Report an Issue</h3>
             <p className="text-muted-foreground text-sm text-center">
               Notice a problem in your neighborhood? Report it here.
             </p>
-          </Link>
+          </div>
         </div>
       </section>
       
