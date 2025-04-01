@@ -5,12 +5,13 @@ import { getFirestore } from "firebase/firestore";
 
 // Your Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCUZtepMiCw4Pa24ZXH-sWFQUnOS9VBVM0",
+  authDomain: "urabancollab.firebaseapp.com",
+  projectId: "urabancollab",
+  storageBucket: "urabancollab.firebasestorage.app",
+  messagingSenderId: "261351589552",
+  appId: "1:261351589552:web:c7707a5bda2eb1c8c11d75",
+  measurementId: "G-TDW768MYMD"
 };
 
 // Initialize Firebase
