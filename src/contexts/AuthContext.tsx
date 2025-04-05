@@ -11,8 +11,8 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { useToast } from "@/components/ui/use-toast";
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useToast } from "@/hooks/use-toast";
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
@@ -23,6 +23,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
+  updateUserProfile: (profileData: Record<string, any>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -133,6 +134,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserProfile = async (profileData: Record<string, any>) => {
+    try {
+      if (!currentUser) throw new Error("No authenticated user found");
+      
+      // Update Firestore document
+      await updateDoc(doc(db, "userProfiles", currentUser.uid), {
+        ...profileData,
+        updatedAt: new Date(),
+        isOnboardingComplete: true
+      });
+      
+      // Update display name in Firebase Auth if provided
+      if (profileData.fullName && profileData.fullName !== currentUser.displayName) {
+        await updateProfile(currentUser, {
+          displayName: profileData.fullName
+        });
+      }
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated",
+      });
+      
+      // Set isNewUser to false after profile is complete
+      setIsNewUser(false);
+      
+    } catch (error: any) {
+      toast({
+        title: "Profile update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const logOut = async () => {
     try {
       await signOut(auth);
@@ -153,7 +190,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signIn,
     signInWithGoogle,
-    logOut
+    logOut,
+    updateUserProfile
   };
 
   return (

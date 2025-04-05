@@ -59,7 +59,7 @@ const AppRoutes = () => {
         <Route path="/" element={<Index />} />
         <Route path="/issues" element={<Issues />} />
         <Route path="/issues/:id" element={<IssueDetail />} />
-        <Route path="/issues/report" element={
+        <Route path="/report-issue" element={
           <ProtectedRoute>
             <ReportIssue />
           </ProtectedRoute>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, PlusCircle, TrendingUp, MessageSquare, Users, ArrowRight, Search } from 'lucide-react';
@@ -71,7 +72,7 @@ const Index = () => {
         description: "Please sign in to report an issue",
       });
     } else {
-      navigate('/issues/report');
+      navigate('/report-issue');
     }
   };
   

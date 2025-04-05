@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, MapPin, Calendar, Award, Settings, LogOut, Edit, Mail, Phone, Home, Clock } from 'lucide-react';
@@ -42,6 +41,7 @@ const Profile = () => {
             phone: userDoc.data().phone || "Not provided",
             address: userDoc.data().address || "Not provided",
             bio: userDoc.data().bio || "No bio provided",
+            fullProfile: userDoc.data(),
             stats: {
               issuesReported: 0,
               issuesSolved: 0,
@@ -60,6 +60,7 @@ const Profile = () => {
             phone: "Not provided",
             address: "Not provided",
             bio: "No bio provided",
+            fullProfile: {},
             stats: {
               issuesReported: 0,
               issuesSolved: 0,
@@ -108,7 +109,7 @@ const Profile = () => {
     };
 
     fetchUserData();
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate, editModalOpen]);
 
   const handleLogout = async () => {
     try {
@@ -343,7 +344,11 @@ const Profile = () => {
       </footer>
 
       {/* Edit Profile Modal */}
-      <EditProfileModal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} />
+      <EditProfileModal 
+        isOpen={editModalOpen} 
+        onClose={() => setEditModalOpen(false)} 
+        userData={userData.fullProfile} 
+      />
     </div>
   );
 };
